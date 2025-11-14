@@ -2,37 +2,31 @@
 import { useState } from "react";
 
 export default function Register() {
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
-    const res = await fetch("/api/login", {
+    const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-
-    const data = await res.json();
-
     if (res.ok){ 
-      localStorage.setItem("user", JSON.stringify(data));
-      alert("Login successful!");
-      window.location.href = "/users";
-    }else {
-      setError(data.error || "Login failed");
+      e.target.reset();  
+      setForm({ name: "", email: "", password: "" }); 
+      alert("Registration successful!");
     }
-
   };
 
   return (
     <div className="p-6 max-w-md mx-auto">
-      <h2 className="text-xl font-bold mb-4">Login</h2>
+      <h2 className="text-xl font-bold mb-4">Register</h2>
       <form onSubmit={handleSubmit} className="space-y-2">
-        {error && <p className="text-red-500">{error}</p>}
-
+        <input
+          className="border p-2 w-full"
+          placeholder="Name"
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
         <input
           className="border p-2 w-full"
           placeholder="Email"
@@ -45,7 +39,7 @@ export default function Register() {
           type="password"
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
-        <button className="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded">Register</button>
       </form>
     </div>
   );
