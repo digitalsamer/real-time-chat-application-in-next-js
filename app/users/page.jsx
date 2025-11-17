@@ -12,21 +12,31 @@ export default function UsersList() {
   useEffect(() => {
     if (!loggedInUserId) return;
 
-
       fetch("/api/users")
       .then((res) => res.json())
       .then((data) => setUsers(data));
 
-      fetch(`/api/unread?receiverId=${loggedInUserId}`)
-      .then((res) => res.json())  
-      .then((data) => {
-        const counts = {};
-        data.forEach((item) => {
-          counts[item._id] = item.count;
-        });
-        setUnreadCounts(counts);
-      });
+      const fetchUnreadMessages = async () => {
+        try {
+          const res = await fetch(`/api/unread?receiverId=${loggedInUserId}`);
+          const data = await res.json();
+          
+          const counts = {};
+          data.forEach((item) => {
+            counts[item._id] = item.count;
+          });
 
+          setUnreadCounts(counts);
+        } catch (err) {
+          console.error("Unread fetch error:", err);
+        }
+      };
+      fetchUnreadMessages();
+      const interval = setInterval(() => {
+        fetchUnreadMessages();
+      }, 1 * 60 * 1000); //1 * 60 * 1000
+
+      return () => clearInterval(interval);
 
   }, [loggedInUserId]);
 

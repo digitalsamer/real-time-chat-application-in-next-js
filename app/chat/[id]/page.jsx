@@ -15,9 +15,9 @@ export default function Chat({ params }) {
   const [receiverUser, setReceiverUser] = useState(null);
   const [session, setSession] = useState(null);
   const [lastMsgTimes, setLastMsgTimes] = useState({});
+  const [fileKey, setFileKey] = useState(Date.now());
 
   const receiverId = pathname.split("/").pop().trim();
-  // const senderId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
   const loggedInUser = JSON.parse(localStorage.getItem('user') ?? {});
   const loggedInUserId = loggedInUser?._id;
   const senderId = loggedInUserId;
@@ -80,7 +80,7 @@ export default function Chat({ params }) {
         body: JSON.stringify({ senderId: senderId, receiverId: receiverId }),
       });
 
-      socket.emit("markAsRead", { senderId, receiverId });
+      // socket.emit("markAsRead", { senderId, receiverId });
     };
 
     window.addEventListener("keydown", handleUserActivity);
@@ -195,13 +195,15 @@ export default function Chat({ params }) {
         sessionId: session?._id,
       }),
     });
-
+    setFileKey(Date.now());
     socket.emit("sendMessage", messageData);
     
     if (res.ok) {
       const newMsg = await res.json();
       // setMessages((prev) => [...prev, newMsg]);
-      setMsg("");
+      setMsg("");       // clear message
+      setImage(null);   // clear image state (removes preview)
+      setFileKey(Date.now());
     }
   };
 
@@ -295,7 +297,7 @@ export default function Chat({ params }) {
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
+    <div className="p-6 max-w-[900px] mx-auto">
       <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold mb-4">Session Start with {receiverUser ? receiverUser.name : "Loading..."} </h2>
 
@@ -309,57 +311,109 @@ export default function Chat({ params }) {
           )}
       </div>
 
-      <div className="h-100 border p-2 overflow-y-auto mb-4 chat-box">
+      {/* <div className="h-100 border p-2 overflow-y-auto mb-4 border-b-0 space-y-2"> */}
+      <div className="h-100 border p-2 overflow-y-auto mb-4 border-b-0 space-y-4">
         {messages.map((m, i) => (
+          
           <div
             key={i}
-            className={`p-1 mb-1 ${
-              m.sender === senderId ? "text-right text-blue-600" : "text-left text-green-600"
-            }`}
+            className={`flex items-end gap-2 ${m.sender === senderId ? "justify-end" : "justify-start"}`}
           >
-            {m.sender === senderId ? (<span>{m.read ? "✔" : "✓"}</span>) : ("")}
-            {m.text && <div className="inline-block bg-gray-100 px-2 py-1 rounded">{m.text}</div>}
-            {m.image && (
-              <div className="mt-2">
+
+            {m.sender !== senderId && (
+              <img
+                src='https://www.redditstatic.com/avatars/defaults/v2/avatar_default_4.png' 
+                alt="user"
+                className="w-8 h-8 rounded-full border"
+              />
+            )}
+            
+            <div
+              className={`
+                max-w-[70%] p-2 rounded-2xl shadow
+                ${m.sender === senderId 
+                  ? "bg-[#712cf9] text-white rounded-br-none" 
+                  : "bg-[#ced4da] text-black rounded-bl-none"}
+              `}
+            >
+              
+              {m.text && (
+                <div className="mb-1 whitespace-pre-wrap">{m.text}</div>
+              )}
+
+              
+              {m.image && (
                 <img
                   src={m.image}
                   alt="uploaded"
-                  className={`inline-block max-w-[200px] rounded shadow ${
-                    m.sender === senderId ? "ml-auto" : "mr-auto"
-                  }`}
+                  className="rounded-lg max-w-[250px] mb-1"
                 />
+              )}
+
+              
+              <div className="flex justify-end items-center gap-1 text-xs opacity-80">
+                <span>
+                  {new Date(m.createdAt).toLocaleString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </span>
+
+                {m.sender === senderId && (
+                  <span>{m.read ? "✔" : "✓"}</span>
+                )}
               </div>
-            )}
-            {m.sender === senderId ? ("") : (<span>{m.read ? "✔" : "✓"}</span>)}
-            <div className="text-xs text-gray-400 mt-1">
-              {new Date(m.createdAt).toLocaleString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })}
             </div>
+            {m.sender === senderId && (
+              <img
+                src='https://styles.redditmedia.com/t5_2s0fe/styles/communityIcon_2cbkzwfs6kr21.png'
+                alt="me"
+                className="w-8 h-8 rounded-full border"
+              />
+            )}
           </div>
         ))}
         
       </div>
 
       <input
-        className="border p-2 w-full"
-        placeholder="Type message..."
+        className="border rounded-xl w-full p-2 pb-10 mb-3 focus:outline-none focus:ring-2 focus:ring-purple-300"
+        placeholder="Type your message..."
         value={msg}
         onChange={(e) => setMsg(e.target.value)}
       />
-      <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files[0])}
-        />
-      <button
-        onClick={sendMessage}
-        className="bg-blue-500 text-white mt-2 px-4 py-2 rounded"
-      >
-        Send
-      </button>
+      <div className="flex items-center justify-between">
+        {/* <input className="p-4" type="file" onChange={(e) => setImage(e.target.files[0])} /> */}
+        <label className="flex items-center gap-2 px-4 py-2 border rounded-xl cursor-pointer hover:bg-gray-50">
+          <svg xmlns="http://www.w3.org/2000/svg" 
+              fill="none" viewBox="0 0 24 24" strokeWidth="1.5" 
+              stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" 
+                  d="M12 16.5V9m0 0l3 3m-3-3l-3 3m9 3.75V18a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 18v-.75"/>
+          </svg>
+          {image ? (
+            <span className="text-green-600 font-medium">
+              {image.name}
+            </span>
+          ) : (
+            <span>Attach File</span>
+          )}
+          <input type="file" key={fileKey} className="hidden" onChange={(e) => setImage(e.target.files[0])} />
+          
+        </label>
+
+        <button onClick={sendMessage} className="flex items-center gap-2 bg-purple-500 text-white px-5 py-2 rounded-xl      hover:bg-purple-600 transition" >
+          Send message
+          <svg xmlns="http://www.w3.org/2000/svg" 
+           fill="none" viewBox="0 0 24 24" strokeWidth="1.5" 
+           stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" 
+                  d="M4.5 12h15m0 0l-6-6m6 6l-6 6"/>
+          </svg>
+        </button>
+
+      </div>
     </div>
   );
 }
