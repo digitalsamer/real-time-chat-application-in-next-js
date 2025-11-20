@@ -16,11 +16,12 @@ export default function Chat({ params }) {
   const [session, setSession] = useState(null);
   const [lastMsgTimes, setLastMsgTimes] = useState({});
   const [fileKey, setFileKey] = useState(Date.now());
-
+  
   const receiverId = pathname.split("/").pop().trim();
   const loggedInUser = JSON.parse(localStorage.getItem('user') ?? {});
   const loggedInUserId = loggedInUser?._id;
   const senderId = loggedInUserId;
+  const sessionStartId = JSON.parse(localStorage.getItem("sessionMy"));
 
 
   const fetchLastMessages = async () => {
@@ -75,11 +76,10 @@ export default function Chat({ params }) {
 
     const handleUserActivity = () => {
       fetch("/api/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ senderId: senderId, receiverId: receiverId }),
-      });
-
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ senderId, receiverId }),
+        });
       // socket.emit("markAsRead", { senderId, receiverId });
     };
 
@@ -136,10 +136,12 @@ export default function Chat({ params }) {
       }),
     });
 
-    const sessionStartId = JSON.parse(localStorage.getItem("sessionMy"));
+    
     fetch(`/api/messages?sender=${senderId}&receiver=${receiverId}&sessionTime=${sessionStartId.startedAt}`)
       .then((res) => res.json())
-      .then((data) => setMessages(Array.isArray(data) ? data : []));
+      .then((data) => {
+        setMessages(Array.isArray(data) ? data : []);
+      });
         
     fetchLastMessages();
 
@@ -147,8 +149,17 @@ export default function Chat({ params }) {
       fetchLastMessages();
     }, 5 * 60 * 1000); //1 * 60 * 1000
 
+    const newInterval = setInterval(() => {
+      fetch(`/api/messages?sender=${senderId}&receiver=${receiverId}&sessionTime=${sessionStartId.startedAt}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setMessages(Array.isArray(data) ? data : []);
+      });
+    }, 10000);
+
     return () => {
       clearInterval(interval);
+      clearInterval(newInterval);
       window.removeEventListener("keydown", handleUserActivity);
       socket.disconnect();
     };
@@ -159,7 +170,7 @@ export default function Chat({ params }) {
   const sendMessage = async (e) => {
     e.preventDefault();
     let imageUrl = "";
-
+    
     if (image) {
       const formData = new FormData();
       formData.append("file", image);
@@ -201,8 +212,8 @@ export default function Chat({ params }) {
     if (res.ok) {
       const newMsg = await res.json();
       // setMessages((prev) => [...prev, newMsg]);
-      setMsg("");       // clear message
-      setImage(null);   // clear image state (removes preview)
+      setMsg("");
+      setImage(null);
       setFileKey(Date.now());
     }
   };
@@ -298,6 +309,19 @@ export default function Chat({ params }) {
 
   return (
     <div className="p-6 max-w-[900px] mx-auto">
+      <header className="narrow-container bg-[#feebe7] bg-beige-500 relative my-10 flex flex-col gap-4 rounded-xl px-4 pt-10 pb-4 lg:mx-auto lg:px-0">
+          <img alt=''
+            className="relative mx-auto mt-[-75px] grid aspect-square w-[150px] max-w-full place-content-center rounded-full bg-[#dddddd] bg-cover bg-center object-cover bg-blend-multiply shadow-xl"
+            src=''
+          />
+
+        <div className="flex flex-col justify-center gap-2 text-center">
+          <h1 className="h3 text-tst-mauve mb-0 flex flex-col gap-2 p-0">
+            {receiverUser ? receiverUser.name : "Loading..."}
+          </h1>
+        </div>
+      </header>
+
       <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold mb-4">Session Start with {receiverUser ? receiverUser.name : "Loading..."} </h2>
 
@@ -312,11 +336,10 @@ export default function Chat({ params }) {
       </div>
 
       {/* <div className="h-100 border p-2 overflow-y-auto mb-4 border-b-0 space-y-2"> */}
-      <div className="h-100 border p-2 overflow-y-auto mb-4 border-b-0 space-y-4">
+      <div className="h-100 border p-2 overflow-y-auto mb-4 border-0 space-y-4">
         {messages.map((m, i) => (
           
-          <div
-            key={i}
+          <div key={i}
             className={`flex items-end gap-2 ${m.sender === senderId ? "justify-end" : "justify-start"}`}
           >
 
@@ -332,8 +355,8 @@ export default function Chat({ params }) {
               className={`
                 max-w-[70%] p-2 rounded-2xl shadow
                 ${m.sender === senderId 
-                  ? "bg-[#712cf9] text-white rounded-br-none" 
-                  : "bg-[#ced4da] text-black rounded-bl-none"}
+                  ? "bg-[#feebe7] text-[#c3617a] rounded-br-none" 
+                  : "bg-[#feebe7] text-[#c3617a] rounded-bl-none"}
               `}
             >
               
@@ -361,15 +384,14 @@ export default function Chat({ params }) {
                 </span>
 
                 {m.sender === senderId && (
-                  <span>{m.read ? "✔" : "✓"}</span>
+                  <span>{m.read ? "✓✓" : "✓"}</span>
                 )}
               </div>
             </div>
             {m.sender === senderId && (
               <img
                 src='https://styles.redditmedia.com/t5_2s0fe/styles/communityIcon_2cbkzwfs6kr21.png'
-                alt="me"
-                className="w-8 h-8 rounded-full border"
+                alt="me" className="w-8 h-8 rounded-full border"
               />
             )}
           </div>

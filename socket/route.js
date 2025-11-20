@@ -39,9 +39,18 @@ export default function handler(req, res) {
 
       });
 
-      socket.on("markAsRead", ({ senderId, receiverId }) => {
-        io.to(senderId).emit("markAsRead", { senderId, receiverId });
-        io.to(receiverId).emit("updateUnreadCount", { senderId, receiverId });
+      // socket.on("markAsRead", ({ senderId, receiverId }) => {
+      //   io.to(senderId).emit("markAsRead", { senderId, receiverId });
+      //   io.to(receiverId).emit("updateUnreadCount", { senderId, receiverId });
+      // });
+
+      socket.on("markAsRead", async ({ senderId, receiverId }) => {
+        await Message.updateMany(
+          { sender: senderId, receiver: receiverId, read: false },
+          { $set: { read: true } }
+        );
+
+        io.to(receiverId).emit("messagesRead", { senderId });
       });
 
       socket.on("disconnect", () => {

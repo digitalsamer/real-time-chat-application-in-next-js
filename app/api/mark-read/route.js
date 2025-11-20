@@ -13,7 +13,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-
+ 
     const result = await Message.updateMany(
       {
         sender: new mongoose.Types.ObjectId(receiverId),
@@ -23,15 +23,6 @@ export async function POST(req) {
       { $set: { read: true } }
     );
 
-    // Mark all messages from sender → receiver as read
-    // const result = await Message.updateMany(
-    //   {
-    //     sender: new mongoose.Types.ObjectId(senderId),
-    //     receiver: new mongoose.Types.ObjectId(receiverId),
-    //     read: false,
-    //   },
-    //   { $set: { read: true } }
-    // );
 
     return new Response(
       JSON.stringify({ success: true, updated: result.modifiedCount, matched:result.matchedCount }),
